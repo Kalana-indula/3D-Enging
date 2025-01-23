@@ -1,12 +1,14 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.geom.Path2D;
 import java.util.ArrayList;
 import java.util.List;
 
 public class DemoViewer {
 
-    //Create a triangle list to form tetrahedron
-    private List<Triangle> tris=new ArrayList<>();
+    //Triangels
+
+
 
     public DemoViewer(){
         //creating a new window
@@ -29,6 +31,14 @@ public class DemoViewer {
                 Graphics2D g2=(Graphics2D) g;
                 g2.setColor(Color.BLACK);
                 g2.fillRect(0,0,getWidth(),getHeight());
+
+                g2.translate(getWidth()/2,getHeight()/2);
+                g2.setColor(Color.WHITE);
+
+                for(Triangle t:tris){
+                    Path2D path=new Path2D.Double();
+                    path.moveTo(t);
+                }
             }
         };
         pane.add(renderPanel,BorderLayout.CENTER);
@@ -36,7 +46,8 @@ public class DemoViewer {
         frame.setSize(400,400);
         frame.setVisible(true);
 
-        //create four triangles
+        //draw triangles
+
 
     }
 }
