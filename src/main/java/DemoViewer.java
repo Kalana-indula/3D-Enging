@@ -6,10 +6,6 @@ import java.util.List;
 
 public class DemoViewer {
 
-    //Triangels
-
-
-
     public DemoViewer(){
         //creating a new window
         JFrame frame=new JFrame();
@@ -25,19 +21,52 @@ public class DemoViewer {
         JSlider pitchSlider=new JSlider(SwingConstants.VERTICAL,-90,90,0);
         pane.add(pitchSlider,BorderLayout.EAST);
 
+        //creating a triangle collection
+        List<Triangle> tris = new ArrayList<>();
+
+        tris.add(new Triangle(
+                new Vertex(100, 100, 100),
+                new Vertex(-100, -100, 100),
+                new Vertex(-100, 100, -100),
+                Color.WHITE));
+
+        tris.add(new Triangle(
+                new Vertex(100, 100, 100),
+                new Vertex(-100, -100, 100),
+                new Vertex(100, -100, -100),
+                Color.RED));
+
+        tris.add(new Triangle(
+                new Vertex(-100, 100, -100),
+                new Vertex(100, -100, -100),
+                new Vertex(100, 100, 100),
+                Color.GREEN));
+
+        tris.add(new Triangle(
+                new Vertex(-100, 100, -100),
+                new Vertex(100, -100, -100),
+                new Vertex(-100, -100, 100),
+                Color.BLUE));
+
+
         //panel to display render results
         JPanel renderPanel=new JPanel(){
             public void paintComponent(Graphics g){
                 Graphics2D g2=(Graphics2D) g;
                 g2.setColor(Color.BLACK);
-                g2.fillRect(0,0,getWidth(),getHeight());
+                g2.fillRect(0, 0, getWidth(), getHeight());
 
-                g2.translate(getWidth()/2,getHeight()/2);
+                g2.translate(getWidth() / 2, getHeight() / 2);
                 g2.setColor(Color.WHITE);
 
                 for(Triangle t:tris){
+                    //draw a path in 2D plane
                     Path2D path=new Path2D.Double();
-                    path.moveTo(t);
+                    path.moveTo(t.v1.x,t.v1.y);
+                    path.lineTo(t.v2.x,t.v2.y);
+                    path.lineTo(t.v3.x,t.v3.y);
+                    path.closePath();
+                    g2.draw(path);
                 }
             }
         };
@@ -46,8 +75,29 @@ public class DemoViewer {
         frame.setSize(400,400);
         frame.setVisible(true);
 
-        //draw triangles
+    }
+}
 
+//creating vertexes
+class Vertex {
+    //create position of vertex
+    double x;
+    double y;
+    double z;
+
+    Vertex(double x, double y, double z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+}
+
+//creating a triangle
+class Triangle {
+    Vertex v1;
+    Vertex v2;
+    Vertex v3;
+    Color color;
 
     }
 }
