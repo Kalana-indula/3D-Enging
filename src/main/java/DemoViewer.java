@@ -23,7 +23,7 @@ public class DemoViewer {
         pane.add(pitchSlider, BorderLayout.EAST);
 
         //creating a triangle collection
-        List<Triangle> tris = new ArrayList<>();
+        final List<Triangle> tris = new ArrayList<>();
 
         tris.add(new Triangle(
                 new Vertex(100, 100, 100),
@@ -49,6 +49,8 @@ public class DemoViewer {
                 new Vertex(-100, -100, 100),
                 Color.BLUE));
 
+        //call inflate here to subdivide the triangles
+        List<Triangle> inflatedTris=inflate(tris);
 
         //panel to display render results
         JPanel renderPanel = new JPanel() {
@@ -80,28 +82,22 @@ public class DemoViewer {
 //                g2.translate(getWidth() / 2, getHeight() / 2);
                 g2.setColor(Color.WHITE);
 
-                for (Triangle t : tris) {
-                    // Transform each vertex using the rotation matrix
-                    Vertex v1 = transform.transform(t.v1);
-                    Vertex v2 = transform.transform(t.v2);
-                    Vertex v3 = transform.transform(t.v3);
-
-                    // Translate to the center of the screen
-                    v1.x += getWidth() / 2;
-                    v1.y += getHeight() / 2;
-                    v2.x += getWidth() / 2;
-                    v2.y += getHeight() / 2;
-                    v3.x += getWidth() / 2;
-                    v3.y += getHeight() / 2;
-
-                    // Draw the wireframe using the transformed vertices
-                    Path2D path = new Path2D.Double();
-                    path.moveTo(v1.x, v1.y);
-                    path.lineTo(v2.x, v2.y);
-                    path.lineTo(v3.x, v3.y);
-                    path.closePath();
-                    g2.draw(path);
-                }
+//                for (Triangle t : inflatedTris) {
+//                    // Transform each vertex using the rotation matrix
+//                    Vertex v1 = transform.transform(t.v1);
+//                    Vertex v2 = transform.transform(t.v2);
+//                    Vertex v3 = transform.transform(t.v3);
+//
+//                    // Translate to the center of the screen
+//                    v1.x += getWidth() / 2;
+//                    v1.y += getHeight() / 2;
+//                    v2.x += getWidth() / 2;
+//                    v2.y += getHeight() / 2;
+//                    v3.x += getWidth() / 2;
+//                    v3.y += getHeight() / 2;
+//
+//
+//                }
 
                 //create a bufferedImage to draw the triangle directly into a pixel buffer
                 BufferedImage img=new BufferedImage(getWidth(),getHeight(),BufferedImage.TYPE_INT_ARGB);
@@ -131,6 +127,14 @@ public class DemoViewer {
                     v2.y+=getHeight()/2;
                     v3.x+=getWidth()/2;
                     v3.y+=getHeight()/2;
+
+                    // Draw the wireframe using the transformed vertices
+                    Path2D path = new Path2D.Double();
+                    path.moveTo(v1.x, v1.y);
+                    path.lineTo(v2.x, v2.y);
+                    path.lineTo(v3.x, v3.y);
+                    path.closePath();
+                    g2.draw(path);
 
                     //Calculate the rectangular bounding box of the triangle
                     //to limit the pixel iteration to the area where the triangle could be
@@ -175,9 +179,43 @@ public class DemoViewer {
                             }
                         }
                     }
+
+                    //Calculate two edge vectors of the triangle
+                    //ab=vector from v1 to v2
+                    //ac=vector from v1 to v3
+                    Vertex ab=new Vertex(v2.x-v1.x,v2.y-v1.y,v2.z-v1.z);
+                    Vertex ac=new Vertex(v3.x-v1.x,v3.y-v1.y,v3.z-v1.z);
+
+                    //Calculate the normal vector of the triaangle using the cross product of ab and ac
+                    //The cross product of two vectors gives a vector perpedicular to both
+                    Vertex norm=new Vertex(
+                            ab.y*ac.z-ab.z*ac.y,
+                            ab.z*ac.x-ab.x*ac.z,
+                            ab.x*ac.y-ab.y*ac.x
+                    );
+
+                    //Calculate the length(magnitude) of the normal vector
+                    //This is used to normalize the vector (make it a unit vector)
+                    double normalLength=Math.sqrt(norm.x*norm.x+norm.y*norm.y+norm.z*norm.z);
+
+                    //Normalize the normal vector by dividing each component by its length
+                    //A unit normal vector has length of 1 and is used for lighting calculations
+                    norm.x/=normalLength;
+                    norm.y/=normalLength;
+                    norm.z/=normalLength;
+
+                    //calculate cosine between triangle normal and light direction
+                    double angleCos=Math.abs(norm.z);
+
+                    //apply shading
+                    Color shadedColor=getShade(t.color,angleCos);
+
+                    //set color for rendering
+                    g2.setColor(shadedColor);
                 }
                 //Draw the final rendered image onto the Graphics2D object
                 g2.drawImage(img,0,0,null);
+
             }
         };
 
@@ -189,8 +227,53 @@ public class DemoViewer {
         //adding listeners
         headingSlider.addChangeListener(e -> renderPanel.repaint());
         pitchSlider.addChangeListener(e -> renderPanel.repaint());
-
     }
+
+    public static Color getShade(Color color,double shade){
+       //apply gamma correction to the color channels (red,green,blue)
+        //gamma correction is used to adjust the intensity of the color
+
+        double redLinear=Math.pow(color.getRed(),2.4)*shade;
+        double greenLinear=Math.pow(color.getGreen(),2.4)*shade;
+        double blueLinear=Math.pow(color.getBlue(),2.4)*shade;
+
+        //apply inverse gamma correction
+        int red=(int) Math.pow(redLinear,1/2.4);
+        int green=(int) Math.pow(greenLinear,1/2.4);
+        int blue=(int) Math.pow(blueLinear,1/2.4);
+
+        //return a new color object with clamped RGB values
+//        return new Color(Math.min(255,red),Math.min(255,green),Math.min(255,blue));
+        return new Color(red,green,blue);
+    }
+
+    //create sphere
+    public static List<Triangle> inflate(List<Triangle> tris){
+        List<Triangle> result=new ArrayList<>();
+
+        for(Triangle t:tris){
+            Vertex m1=new Vertex((t.v1.x+t.v2.x)/2,(t.v1.y+t.v2.y)/2,(t.v1.z+t.v2.z)/2);
+            Vertex m2=new Vertex((t.v2.x+t.v3.x)/2,(t.v2.y+t.v3.y)/2,(t.v2.z+t.v3.z)/2);
+            Vertex m3=new Vertex((t.v1.x+t.v3.x)/2,(t.v1.y+t.v3.y)/2,(t.v1.z+t.v3.z)/2);
+
+            result.add(new Triangle(t.v1,m1,m3,t.color));
+            result.add(new Triangle(t.v2,m1,m2,t.color));
+            result.add(new Triangle(t.v3,m2,m3,t.color));
+            result.add(new Triangle(m1,m2,m3,t.color));
+        }
+
+        for(Triangle t:result){
+            for(Vertex v:new Vertex[]{t.v1,t.v2,t.v3}){
+                double l=Math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z)/Math.sqrt(30000);
+                v.x/=l;
+                v.y/=l;
+                v.z/=l;
+            }
+        }
+
+        return result;
+    }
+
 }
 
 //creating vertexes
@@ -221,6 +304,7 @@ class Triangle {
         this.v3 = v3;
         this.color = color;
     }
+
 }
 
 //handle matrix calculations
