@@ -103,9 +103,18 @@ public class DemoViewer {
                     g2.draw(path);
                 }
 
-
                 //create a bufferedImage to draw the triangle directly into a pixel buffer
                 BufferedImage img=new BufferedImage(getWidth(),getHeight(),BufferedImage.TYPE_INT_ARGB);
+
+                //Create a z-buffer array to store depth values for each pixel in the image
+                //The z-buffer ensures that only the closest (visible) objects are rendered
+                double[] zBuffer=new double[img.getWidth()*img.getHeight()];
+
+                //Initialize the z-buffer with extremely far away depths
+                //This ensures that any rendered object will be closer than the initial value
+                for(int q=0; q < zBuffer.length; q++){
+                    zBuffer[q]=Double.NEGATIVE_INFINITY;
+                }
 
                 //Iterate through each triangle in the list
                 for(Triangle t:tris){
@@ -146,8 +155,23 @@ public class DemoViewer {
                             //check if the pixel lies inside the triangle
                             //Barycentric coordinates must be between 0 and 1
                             if(b1 >= 0 && b1 <= 1 && b2>= 0 && b2 <= 1 && b3 >= 0 && b3 <= 1){
-                                //set the pixel color to the triangle's color
-                                img.setRGB(x,y,t.color.getRGB());
+                                //Calculate the depth of the current pixel in using barycentric interpolation
+                                //This gives the z-coordinate of the pixel in 3D space
+                                double depth=b1*v1.z+b2*v2.z+b3*v3.z;
+
+                                //calculate the index of the current pixel in the z-buffer array
+                                //The z-buffer is a 1D array representing a 2D image, so we use:y* width+x
+                                int zIndex=y*img.getWidth()+x;
+
+                                //Check if the current pixel is closer than the previously stored depth
+                                if(zBuffer[zIndex]<depth){
+                                    //set the pixel color to the triangle's color
+                                    img.setRGB(x,y,t.color.getRGB());
+
+                                    //update the z-buffer with the new depth
+                                    zBuffer[zIndex]=depth;
+                                }
+
                             }
                         }
                     }
